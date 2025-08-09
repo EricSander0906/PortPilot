@@ -1,0 +1,213 @@
+HTML5 Game Development Document: Port Pilot (Boat Traffic Management)
+1. Project Overview
+The goal of this project is to recreate the Flash-based game Port Pilot in HTML5, utilizing modern web technologies like JavaScript, Phaser 3, and HTML5 Canvas/WebGL. The game will replicate the boat traffic management mechanics, UI, and gameplay features, with the player controlling boats via mouse dragging to deliver cargo to matching colored docks.
+
+Core Features:
+Boat Movement: Boats are controlled by dragging them with the mouse.
+
+Automatic Boat Behavior: Boats automatically spawn and move, disappearing when not controlled.
+
+Cargo Delivery: Boats carry shipments (red or yellow) and must deliver them to the corresponding colored docks.
+
+Dock Interaction: There are six docks (two in each area: top-left, middle-center, and bottom-right) for red and yellow boats.
+
+Boat Collision Warning: If boats get too close, a warning (red circle) and sound will activate.
+
+Clouds: Moving clouds with shadows cast from bottom-right to top-left.
+
+2. Game Features and Requirements
+Core Gameplay Mechanics:
+Boat Control (Mouse Dragging):
+
+The player can drag boats to control their movement.
+
+Boats will automatically spawn at a specific location and will move autonomously when not being controlled by the player.
+
+Once a boat reaches a dock and delivers all shipments, it will disappear from the screen.
+
+Docks:
+
+Six docks are available:
+
+Top-left: Red and Yellow docks.
+
+Middle-center: Red and Yellow docks.
+
+Bottom-right: Red and Yellow docks.
+
+Color Matching: Boats must deliver red shipments to red docks and yellow shipments to yellow docks.
+
+When a boat successfully delivers all of its shipments, it should disappear from the screen.
+
+Boat Shipments:
+
+Boats carry shipments of red or yellow:
+
+Some boats carry 3 shipments, while others carry 5 shipments.
+
+Matching Dock Requirement: A red boat must deliver to a red dock, and a yellow boat must deliver to a yellow dock.
+
+Automatic Boat Spawning:
+
+Boats emerge automatically and will move in a set direction or pattern.
+
+If the boat is not controlled by the player, it will disappear once it has either delivered all shipments or if it goes off-screen.
+
+Collision Warning (Boats Too Close):
+
+If boats get too close, a red circle will appear around the boats, and a warning sound will be triggered to alert the player.
+
+Cloud Shadows:
+
+Clouds will move from bottom-right to top-left, casting shadows on the game screen.
+
+UI Elements:
+HUD:
+
+The score will be displayed, tracking the number of successful deliveries.
+
+Shipments remaining for each boat should be visible while dragging.
+
+Dock Indicators:
+
+Docks should be clearly labeled and distinguishable by color (red or yellow).
+
+Docks must show some indication when they are available or occupied.
+
+Game Over / Win Screen:
+
+Display final score and options to retry or go back to the main menu.
+
+3. Technical Requirements
+Game Engine:
+Phaser 3 is the recommended engine, as it provides built-in support for:
+
+Animation (boat movement, docking, etc.)
+
+Physics (collision detection for boats)
+
+Game states (menu, gameplay, game over)
+
+Input (mouse dragging)
+
+Rendering:
+HTML5 Canvas or WebGL rendering is required to display the game at 60 FPS on desktop and at least 30 FPS on mobile.
+
+Assets Handling:
+Images: All sprites should be converted to PNG or SVG format, with sprite sheets used for animations (e.g., boat movement).
+
+Audio: Audio assets should be converted to OGG and MP3 for compatibility across browsers.
+
+Clouds: Clouds should be designed as animated sprites or moving background layers.
+
+Controls:
+Mouse: Use mouse dragging to move the boats.
+
+Keyboard (Optional): Consider adding keyboard support for additional control, such as arrow keys for boat movement.
+
+4. Game Logic Breakdown
+1. Boat Class (Boat.js)
+Properties:
+
+boatId: Unique identifier for the boat.
+
+cargo: Array of cargo shipments (red or yellow).
+
+currentDock: The dock the boat is moving towards.
+
+isControlled: Boolean to check if the boat is being dragged.
+
+Methods:
+
+spawn(): Method to spawn the boat at a random dock.
+
+move(): Moves the boat based on player drag or automatic movement.
+
+checkCollision(): Checks if the boat is too close to another boat and triggers the warning.
+
+deliverCargo(): Handles the delivery of cargo to the correct dock.
+
+disappear(): Removes the boat after all shipments are delivered.
+
+2. Dock Class (Dock.js)
+Properties:
+
+dockId: Identifies whether the dock is red or yellow.
+
+currentBoat: Keeps track of the boat currently at the dock.
+
+Methods:
+
+acceptCargo(boat): Checks if the boat’s cargo matches the dock color and accepts the delivery.
+
+3. Gameplay Scene (Play.js)
+Boat Spawning: Boats automatically spawn at random intervals and move towards a dock.
+
+Docking: Boats move towards the matching colored dock and deliver shipments.
+
+Collision Detection: Boats detect when they are too close to each other and display a warning.
+
+Cloud Movement: Clouds should move in the background, casting shadows as they progress from bottom-right to top-left.
+
+4. Sound & Audio
+Background Music: Play ambient background music throughout the game.
+
+Warning Sound: Trigger a warning sound when boats get too close to each other.
+
+Docking Sound: A sound effect when the boat successfully delivers its cargo.
+
+5. Visual and UI Design
+Docks:
+
+Position 6 docks across three areas (top-left, middle-center, bottom-right), two for each color.
+
+Use distinct colors (red and yellow) to differentiate docks.
+
+When a dock is full, change the color or show an animation to indicate it's occupied.
+
+Boat Design:
+
+Boats should have distinct visual styles based on their cargo (red or yellow).
+
+When dragging, show a visual cue (such as a highlighted border) indicating the boat is being controlled.
+
+Clouds:
+
+Clouds should move across the screen and cast shadows from bottom-right to top-left.
+
+Use subtle animations to make the clouds look realistic.
+
+6. Performance and Optimization
+Target 60 FPS on desktop and 30 FPS on mobile devices.
+
+Use object pooling to optimize the spawning and disappearing of boats.
+
+Optimize image and audio assets for faster loading times, especially on mobile.
+
+7. Development Phases
+1. Preproduction
+Asset collection (images, sounds, animations).
+
+Define boat behaviors, movement mechanics, and docking logic.
+
+2. Production
+Implement core game mechanics: boat movement, docking, collision detection.
+
+Build out the UI elements: HUD, game over screens, and menu navigation.
+
+Implement audio and visual effects (clouds, sound effects).
+
+3. Testing & Tuning
+Playtesting to ensure mechanics feel right (boat speeds, docking timing, collision).
+
+Fine-tune UI layout for responsiveness and user experience.
+
+4. Deployment
+Host the game on Replit or other web hosting platforms for easy sharing and testing.
+
+8. Optional Enhancements
+Mobile Support: Add touch-based controls for dragging boats on mobile devices.
+
+Settings Menu: Allow players to mute/unmute sounds, adjust volume, and set difficulty.
+
+Analytics: Track player performance, such as the number of deliveries, and level progression.
