@@ -1,0 +1,21 @@
+<svg width="60" height="40" viewBox="0 0 60 40" xmlns="http://www.w3.org/2000/svg">
+  <!-- Boat hull -->
+  <path d="M5 25 L55 25 L50 35 L10 35 Z" fill="#8B4513" stroke="#654321" stroke-width="2"/>
+  
+  <!-- Boat deck -->
+  <rect x="8" y="20" width="44" height="5" fill="#D2691E" stroke="#A0522D" stroke-width="1"/>
+  
+  <!-- Mast -->
+  <rect x="29" y="5" width="2" height="15" fill="#654321"/>
+  
+  <!-- Sail -->
+  <path d="M31 5 L45 10 L45 18 L31 15 Z" fill="#FFD700" stroke="#DAA520" stroke-width="1"/>
+  
+  <!-- Cargo containers -->
+  <rect x="12" y="15" width="8" height="5" fill="#FFFF44" stroke="#CCCC00" stroke-width="1"/>
+  <rect x="22" y="15" width="8" height="5" fill="#FFFF44" stroke="#CCCC00" stroke-width="1"/>
+  <rect x="40" y="15" width="8" height="5" fill="#FFFF44" stroke="#CCCC00" stroke-width="1"/>
+  
+  <!-- Bow wave -->
+  <path d="M55 25 Q60 20 58 30" fill="none" stroke="#4682B4" stroke-width="2" opacity="0.6"/>
+</svg>

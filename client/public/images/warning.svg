@@ -1,0 +1,11 @@
+<svg width="30" height="30" viewBox="0 0 30 30" xmlns="http://www.w3.org/2000/svg">
+  <!-- Warning circle -->
+  <circle cx="15" cy="15" r="14" fill="#FF0000" stroke="#CC0000" stroke-width="2" opacity="0.8"/>
+  
+  <!-- Warning triangle -->
+  <path d="M15 5 L23 20 L7 20 Z" fill="#FFFFFF" stroke="#CCCCCC" stroke-width="1"/>
+  
+  <!-- Exclamation mark -->
+  <rect x="14" y="10" width="2" height="6" fill="#FF0000"/>
+  <circle cx="15" cy="18" r="1" fill="#FF0000"/>
+</svg>
