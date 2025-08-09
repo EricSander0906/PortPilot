@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
 
 export type GameState = "menu" | "playing" | "gameOver";
-export type CargoColor = "red" | "yellow";
+export type CargoColor = "red" | "yellow" | "mixed";
 
 interface PortPilotState {
   gameState: GameState;

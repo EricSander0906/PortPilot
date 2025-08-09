@@ -59,8 +59,10 @@ export class GameScene extends Phaser.Scene {
       loop: true
     });
 
-    // Set up input handling for click-to-path
+    // Set up input handling for mouse drag controls
     this.input.on('pointerdown', this.onPointerDown, this);
+    this.input.on('pointermove', this.onPointerMove, this);
+    this.input.on('pointerup', this.onPointerUp, this);
 
     // Spawn first boat immediately
     this.time.delayedCall(1000, this.spawnBoat, [], this);
@@ -193,7 +195,9 @@ export class GameScene extends Phaser.Scene {
         y = height / 2;
     }
 
-    const color = Phaser.Math.RND.pick(['red', 'yellow']) as 'red' | 'yellow';
+    // 30% chance for mixed color boats
+    const isMixed = Math.random() < 0.3;
+    const color = isMixed ? 'mixed' : Phaser.Math.RND.pick(['red', 'yellow']) as 'red' | 'yellow';
     const shipments = Phaser.Math.Between(2, 5);
     
     const boat = new Boat(this, x, y, color, shipments);
@@ -203,75 +207,28 @@ export class GameScene extends Phaser.Scene {
   private onPointerDown(pointer: Phaser.Input.Pointer) {
     const boat = this.getBoatAtPosition(pointer.x, pointer.y);
     if (boat) {
-      // First click selects boat
-      if (this.draggedBoat !== boat) {
-        if (this.draggedBoat) {
-          this.draggedBoat.setSelected(false);
-        }
-        this.draggedBoat = boat;
-        boat.setSelected(true);
-        usePortPilot.getState().setSelectedBoat(boat.getId());
-      } else {
-        // Second click sets path
-        this.setBoatPath(boat, pointer.x, pointer.y);
-      }
-    } else {
-      // Click on empty space - set path for selected boat
-      if (this.draggedBoat) {
-        this.setBoatPath(this.draggedBoat, pointer.x, pointer.y);
-      }
+      this.draggedBoat = boat;
+      boat.setDragging(true);
+      usePortPilot.getState().setSelectedBoat(boat.getId());
     }
   }
 
-  private setBoatPath(boat: Boat, targetX: number, targetY: number) {
-    // Create smooth path preview
-    this.showPathPreview(boat.x, boat.y, targetX, targetY);
-    
-    // Set boat destination
-    boat.setDestination(targetX, targetY);
-    
-    // Check if target is over a dock
-    const dock = this.getDockAtPosition(targetX, targetY);
-    if (dock && dock.canAcceptBoat(boat)) {
-      // Delay delivery until boat reaches destination
-      boat.setTargetDock(dock);
+  private onPointerMove(pointer: Phaser.Input.Pointer) {
+    if (this.draggedBoat) {
+      // Smooth movement towards mouse position
+      this.draggedBoat.setMouseTarget(pointer.x, pointer.y);
     }
   }
 
-  private showPathPreview(startX: number, startY: number, endX: number, endY: number) {
-    // Remove existing preview
-    if (this.pathPreview) {
-      this.pathPreview.destroy();
+  private onPointerUp() {
+    if (this.draggedBoat) {
+      this.draggedBoat.setDragging(false);
+      this.draggedBoat = null;
+      usePortPilot.getState().setSelectedBoat(null);
     }
-
-    // Create smooth curved path
-    this.pathPreview = this.add.graphics();
-    this.pathPreview.lineStyle(3, 0xFFFFFF, 0.8);
-    
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2 - 50; // Slight curve
-    
-    const curve = new Phaser.Curves.QuadraticBezier(
-      new Phaser.Math.Vector2(startX, startY),
-      new Phaser.Math.Vector2(midX, midY),
-      new Phaser.Math.Vector2(endX, endY)
-    );
-    
-    curve.draw(this.pathPreview);
-    
-    // Fade out preview after 2 seconds
-    this.tweens.add({
-      targets: this.pathPreview,
-      alpha: 0,
-      duration: 2000,
-      onComplete: () => {
-        if (this.pathPreview) {
-          this.pathPreview.destroy();
-          this.pathPreview = null;
-        }
-      }
-    });
   }
+
+
 
   private getBoatAtPosition(x: number, y: number): Boat | null {
     for (const boat of this.boats) {
@@ -292,19 +249,31 @@ export class GameScene extends Phaser.Scene {
   }
 
   public handleDelivery(boat: Boat, dock: Dock) {
-    if (boat.getColor() === dock.getColor()) {
-      // Successful delivery with different scoring: red=40, yellow=10
-      const basePoints = boat.getColor() === 'red' ? 40 : 10;
-      const points = basePoints * boat.getShipments();
-      usePortPilot.getState().incrementScore(points);
+    // Mixed boats can deliver to any dock, others must match color
+    if (boat.getColor() === 'mixed' || boat.getColor() === dock.getColor()) {
+      // Successful delivery - don't remove boat completely, just deliver one shipment
+      const delivered = boat.deliverCargo();
+      
+      // Scoring: red=40, yellow=10, mixed=25 per shipment
+      let basePoints = 10;
+      if (boat.getColor() === 'red') basePoints = 40;
+      else if (boat.getColor() === 'mixed') basePoints = 25;
+      
+      usePortPilot.getState().incrementScore(basePoints);
       usePortPilot.getState().updateBestScore();
       
       // Play success sound
       const { playSuccess } = useAudio.getState();
       playSuccess();
       
-      // Remove boat
-      this.removeBoat(boat);
+      // Only remove boat if all shipments delivered
+      if (delivered) {
+        this.removeBoat(boat);
+      } else {
+        // Recreate boat shape with new shipment count
+        const boatAny = boat as any;
+        boatAny.createBoatShape();
+      }
     }
   }
 
@@ -355,17 +324,24 @@ export class GameScene extends Phaser.Scene {
         
         const distance = Phaser.Math.Distance.Between(boat1.x, boat1.y, boat2.x, boat2.y);
         
-        if (distance < 80) { // Collision threshold
+        if (distance < 30) { // Actual collision
+          // Create explosion effect
+          this.createExplosion(boat1.x, boat1.y);
+          this.createExplosion(boat2.x, boat2.y);
+          
+          // Play explosion sound
+          const { playHit } = useAudio.getState();
+          playHit();
+          
+          // Trigger game over
+          this.triggerGameOver();
+          return;
+        } else if (distance < 60) { // Warning zone
           // Create warning circle
           const warning = this.add.graphics();
           warning.lineStyle(4, 0xff0000, 0.8);
-          warning.strokeCircle(boat1.x, boat1.y, 50);
-          warning.strokeCircle(boat2.x, boat2.y, 50);
+          warning.strokeCircle((boat1.x + boat2.x) / 2, (boat1.y + boat2.y) / 2, 40);
           this.warningCircles.push(warning);
-          
-          // Play warning sound
-          const { playHit } = useAudio.getState();
-          playHit();
           
           // Fade out warning
           this.tweens.add({
@@ -377,5 +353,48 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+  }
+
+  private createExplosion(x: number, y: number) {
+    // Create explosion particles
+    const explosion = this.add.graphics();
+    
+    // Multiple explosion rings
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 100, () => {
+        explosion.clear();
+        explosion.fillStyle(0xFF4400, 0.8 - i * 0.2);
+        explosion.fillCircle(x, y, 20 + i * 15);
+        explosion.fillStyle(0xFF8800, 0.6 - i * 0.1);
+        explosion.fillCircle(x, y, 10 + i * 8);
+      });
+    }
+    
+    // Remove explosion after animation
+    this.time.delayedCall(500, () => {
+      explosion.destroy();
+    });
+  }
+
+  private triggerGameOver() {
+    // Calculate statistics
+    const totalDeliveries = Math.floor(usePortPilot.getState().score / 25); // Rough estimate
+    const smallShips = this.boats.filter(b => b.getShipmentType() === 'small').length;
+    const mediumShips = this.boats.filter(b => b.getShipmentType() === 'medium').length;
+    const bigShips = this.boats.filter(b => b.getShipmentType() === 'big').length;
+    
+    // Store game stats
+    usePortPilot.getState().updateBestScore();
+    
+    // Switch to game over scene
+    usePortPilot.getState().setGameState('gameOver');
+    this.scene.start('GameOverScene', {
+      totalPoints: usePortPilot.getState().score,
+      playerHighScore: usePortPilot.getState().bestScore,
+      cargoDelivered: totalDeliveries,
+      smallShipsDocked: smallShips,
+      mediumShipsDocked: mediumShips,
+      bigShipsDocked: bigShips
+    });
   }
 }
