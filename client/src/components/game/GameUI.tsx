@@ -4,7 +4,7 @@ import { Button } from "../ui/button";
 import { Card } from "../ui/card";
 
 export function GameUI() {
-  const { score, deliveries, gameState } = usePortPilot();
+  const { score, bestScore, gameState } = usePortPilot();
   const { toggleMute, isMuted } = useAudio();
 
   if (gameState !== 'playing') return null;
@@ -34,7 +34,7 @@ export function GameUI() {
         }}>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <div>Score: {score}</div>
-            <div>Deliveries: {deliveries}</div>
+            <div>Best: {bestScore}</div>
           </div>
         </Card>
 
@@ -68,7 +68,7 @@ export function GameUI() {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '14px' }}>
-            Drag boats to matching colored docks to deliver cargo
+            Click boats to select, then click destination to set path • Red cargo = 40pts, Yellow = 10pts
           </div>
         </Card>
       </div>

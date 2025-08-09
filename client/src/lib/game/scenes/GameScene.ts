@@ -12,6 +12,7 @@ export class GameScene extends Phaser.Scene {
   private draggedBoat: Boat | null = null;
   private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private warningCircles: Phaser.GameObjects.Graphics[] = [];
+  private pathPreview: Phaser.GameObjects.Graphics | null = null;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -38,6 +39,12 @@ export class GameScene extends Phaser.Scene {
       backgroundMusic.play().catch(() => console.log('Background music play prevented'));
     }
 
+    // Create natural sea background
+    this.createSeaBackground();
+    
+    // Create ground areas for docks
+    this.createGroundAreas();
+    
     // Create docks in three areas
     this.createDocks();
     
@@ -52,13 +59,81 @@ export class GameScene extends Phaser.Scene {
       loop: true
     });
 
-    // Set up input handling
+    // Set up input handling for click-to-path
     this.input.on('pointerdown', this.onPointerDown, this);
-    this.input.on('pointermove', this.onPointerMove, this);
-    this.input.on('pointerup', this.onPointerUp, this);
 
     // Spawn first boat immediately
     this.time.delayedCall(1000, this.spawnBoat, [], this);
+  }
+
+  private createSeaBackground() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    // Create realistic sea gradient background
+    const graphics = this.add.graphics();
+    
+    // Sea gradient from light blue to darker blue
+    for (let i = 0; i < height; i++) {
+      const ratio = i / height;
+      const r = Math.floor(65 + (30 - 65) * ratio);   // 65 to 30
+      const g = Math.floor(180 + (100 - 180) * ratio); // 180 to 100  
+      const b = Math.floor(220 + (160 - 220) * ratio); // 220 to 160
+      const color = (r << 16) | (g << 8) | b;
+      
+      graphics.fillStyle(color, 1);
+      graphics.fillRect(0, i, width, 1);
+    }
+
+    // Add wave patterns
+    const wave1 = this.add.graphics();
+    wave1.lineStyle(2, 0x4A90E2, 0.3);
+    for (let x = 0; x < width; x += 50) {
+      const y = height * 0.3 + Math.sin(x * 0.02) * 10;
+      if (x === 0) wave1.moveTo(x, y);
+      else wave1.lineTo(x, y);
+    }
+    wave1.strokePath();
+
+    const wave2 = this.add.graphics();
+    wave2.lineStyle(2, 0x87CEEB, 0.2);
+    for (let x = 0; x < width; x += 30) {
+      const y = height * 0.6 + Math.sin(x * 0.03 + 1) * 8;
+      if (x === 0) wave2.moveTo(x, y);
+      else wave2.lineTo(x, y);
+    }
+    wave2.strokePath();
+  }
+
+  private createGroundAreas() {
+    const width = this.cameras.main.width;
+    const height = this.cameras.main.height;
+
+    // Top-left ground area for docks
+    const topLeftGround = this.add.graphics();
+    topLeftGround.fillStyle(0x8B7355, 1); // Brown sandy color
+    topLeftGround.fillEllipse(width * 0.2, height * 0.25, width * 0.25, height * 0.2);
+    
+    // Add some texture to ground
+    topLeftGround.fillStyle(0x654321, 0.3);
+    for (let i = 0; i < 20; i++) {
+      const x = width * 0.1 + Math.random() * width * 0.2;
+      const y = height * 0.15 + Math.random() * height * 0.2;
+      topLeftGround.fillCircle(x, y, Math.random() * 3 + 1);
+    }
+
+    // Bottom-right ground area for docks  
+    const bottomRightGround = this.add.graphics();
+    bottomRightGround.fillStyle(0x8B7355, 1);
+    bottomRightGround.fillEllipse(width * 0.8, height * 0.75, width * 0.25, height * 0.2);
+    
+    // Add texture
+    bottomRightGround.fillStyle(0x654321, 0.3);
+    for (let i = 0; i < 20; i++) {
+      const x = width * 0.7 + Math.random() * width * 0.2;
+      const y = height * 0.65 + Math.random() * height * 0.2;
+      bottomRightGround.fillCircle(x, y, Math.random() * 3 + 1);
+    }
   }
 
   private createDocks() {
@@ -119,7 +194,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const color = Phaser.Math.RND.pick(['red', 'yellow']) as 'red' | 'yellow';
-    const shipments = Phaser.Math.RND.pick([3, 5]);
+    const shipments = Phaser.Math.Between(2, 5);
     
     const boat = new Boat(this, x, y, color, shipments);
     this.boats.push(boat);
@@ -128,31 +203,74 @@ export class GameScene extends Phaser.Scene {
   private onPointerDown(pointer: Phaser.Input.Pointer) {
     const boat = this.getBoatAtPosition(pointer.x, pointer.y);
     if (boat) {
-      this.draggedBoat = boat;
-      boat.setDragging(true);
-      usePortPilot.getState().setSelectedBoat(boat.getId());
-    }
-  }
-
-  private onPointerMove(pointer: Phaser.Input.Pointer) {
-    if (this.draggedBoat) {
-      this.draggedBoat.setPosition(pointer.x, pointer.y);
-    }
-  }
-
-  private onPointerUp() {
-    if (this.draggedBoat) {
-      this.draggedBoat.setDragging(false);
-      
-      // Check if boat is over a dock
-      const dock = this.getDockAtPosition(this.draggedBoat.x, this.draggedBoat.y);
-      if (dock && dock.canAcceptBoat(this.draggedBoat)) {
-        this.handleDelivery(this.draggedBoat, dock);
+      // First click selects boat
+      if (this.draggedBoat !== boat) {
+        if (this.draggedBoat) {
+          this.draggedBoat.setSelected(false);
+        }
+        this.draggedBoat = boat;
+        boat.setSelected(true);
+        usePortPilot.getState().setSelectedBoat(boat.getId());
+      } else {
+        // Second click sets path
+        this.setBoatPath(boat, pointer.x, pointer.y);
       }
-      
-      this.draggedBoat = null;
-      usePortPilot.getState().setSelectedBoat(null);
+    } else {
+      // Click on empty space - set path for selected boat
+      if (this.draggedBoat) {
+        this.setBoatPath(this.draggedBoat, pointer.x, pointer.y);
+      }
     }
+  }
+
+  private setBoatPath(boat: Boat, targetX: number, targetY: number) {
+    // Create smooth path preview
+    this.showPathPreview(boat.x, boat.y, targetX, targetY);
+    
+    // Set boat destination
+    boat.setDestination(targetX, targetY);
+    
+    // Check if target is over a dock
+    const dock = this.getDockAtPosition(targetX, targetY);
+    if (dock && dock.canAcceptBoat(boat)) {
+      // Delay delivery until boat reaches destination
+      boat.setTargetDock(dock);
+    }
+  }
+
+  private showPathPreview(startX: number, startY: number, endX: number, endY: number) {
+    // Remove existing preview
+    if (this.pathPreview) {
+      this.pathPreview.destroy();
+    }
+
+    // Create smooth curved path
+    this.pathPreview = this.add.graphics();
+    this.pathPreview.lineStyle(3, 0xFFFFFF, 0.8);
+    
+    const midX = (startX + endX) / 2;
+    const midY = (startY + endY) / 2 - 50; // Slight curve
+    
+    const curve = new Phaser.Curves.QuadraticBezier(
+      new Phaser.Math.Vector2(startX, startY),
+      new Phaser.Math.Vector2(midX, midY),
+      new Phaser.Math.Vector2(endX, endY)
+    );
+    
+    curve.draw(this.pathPreview);
+    
+    // Fade out preview after 2 seconds
+    this.tweens.add({
+      targets: this.pathPreview,
+      alpha: 0,
+      duration: 2000,
+      onComplete: () => {
+        if (this.pathPreview) {
+          this.pathPreview.destroy();
+          this.pathPreview = null;
+        }
+      }
+    });
   }
 
   private getBoatAtPosition(x: number, y: number): Boat | null {
@@ -173,12 +291,13 @@ export class GameScene extends Phaser.Scene {
     return null;
   }
 
-  private handleDelivery(boat: Boat, dock: Dock) {
+  public handleDelivery(boat: Boat, dock: Dock) {
     if (boat.getColor() === dock.getColor()) {
-      // Successful delivery
-      const points = boat.getShipments() * 10;
+      // Successful delivery with different scoring: red=40, yellow=10
+      const basePoints = boat.getColor() === 'red' ? 40 : 10;
+      const points = basePoints * boat.getShipments();
       usePortPilot.getState().incrementScore(points);
-      usePortPilot.getState().incrementDeliveries();
+      usePortPilot.getState().updateBestScore();
       
       // Play success sound
       const { playSuccess } = useAudio.getState();

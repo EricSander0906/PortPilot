@@ -9,7 +9,7 @@ export class GameOverScene extends Phaser.Scene {
   create() {
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
-    const { score, deliveries } = usePortPilot.getState();
+    const { score, bestScore } = usePortPilot.getState();
 
     // Game Over title
     this.add.text(centerX, centerY - 150, 'GAME OVER', {
@@ -24,8 +24,8 @@ export class GameOverScene extends Phaser.Scene {
       color: '#ffffff'
     }).setOrigin(0.5);
 
-    // Deliveries made
-    this.add.text(centerX, centerY, `Deliveries Made: ${deliveries}`, {
+    // Best score
+    this.add.text(centerX, centerY, `Best Score: ${bestScore}`, {
       fontSize: '24px',
       color: '#ffffff'
     }).setOrigin(0.5);
